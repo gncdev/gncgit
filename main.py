@@ -28,7 +28,9 @@ def requires_repo(method):
     def wrapper(self, *args, **kwargs):
         self.ensure_repo()
         return method(self, *args, **kwargs)
+
     return wrapper
+
 
 class GNCGIT:
     def __init__(self, root="."):
@@ -136,7 +138,8 @@ class GNCGIT:
         index = self.load_index()
         relative_file = file.relative_to(self.root).as_posix()
         index.add_file(current_branch.name, relative_file, hashed_content)
-        self.index_file.write_text(json.dumps(index.to_dict(), indent=4))
+        self.index_file.write_text(json.dumps(index.to_dict(), indent=4), encoding="utf-8")
+        print(f"Added {file_name}")
 
     @requires_repo
     def commit(self, message):
@@ -159,6 +162,31 @@ class GNCGIT:
         index.clear_branch(current_branch.name)
         self.index_file.write_text(json.dumps(index.to_dict(), indent=2), encoding="utf-8")
         print(f"Committed as {new_commit_id}")
+
+    @requires_repo
+    def checkout(self, branch_name: str):
+        if branch_name == self.get_branch().name:
+            print("Branch already checked out.")
+            return
+        branch_file = self.heads_dir / branch_name
+        if not branch_file.exists():
+            branch_file.write_text(
+                self.get_branch().last_commit or "",
+                encoding="utf-8"
+            )
+            print(f"Created branch: {branch_name}")
+        branch = self.get_branch(branch_name)
+        self.head_file.write_text(branch.name, encoding="utf-8")
+        target_commit = self.get_commit(branch.last_commit)
+        if target_commit is None:
+            print("Nothing to checkout.")
+            return
+        for filename, object_hash in target_commit.files.items():
+            if not (self.objects_dir / object_hash).exists():
+                raise FileNotFoundError(f"Missing file object: {object_hash}")
+            filename_path = self.root / filename
+            filename_path.parent.mkdir(parents=True, exist_ok=True)
+            filename_path.write_bytes((self.objects_dir / object_hash).read_bytes())
 
     def load_gitignore_patterns(self):
         patterns = []
@@ -200,6 +228,8 @@ def create_argparser():
     add_parser.add_argument("file_name")
     commit_parser = subparsers.add_parser("commit")
     commit_parser.add_argument("-m", "--message", required=True)
+    checkout_parser = subparsers.add_parser("checkout")
+    checkout_parser.add_argument("branch")
     return parser
 
 
@@ -214,5 +244,8 @@ if __name__ == "__main__":
             gncgit.add(args.file_name)
         elif args.command == "commit":
             gncgit.commit(args.message)
+        elif args.command == "checkout":
+            gncgit.checkout(args.branch)
+
     except (FileNotFoundError, RuntimeError, json.JSONDecodeError) as error:
         parser.error(str(error))

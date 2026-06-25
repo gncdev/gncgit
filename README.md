@@ -10,7 +10,8 @@ My goal with this project is to understand how version control systems work inte
 * Add files to the index
 * Store file contents as hashed objects
 * Create commits with parent references
-* Track the latest commit of the current branch
+* Track the latest commit for each branch
+* Checkout branches and restore files from committed objects
 
 ## Commands
 
@@ -18,6 +19,7 @@ My goal with this project is to understand how version control systems work inte
 gncgit init
 gncgit add <file>
 gncgit commit -m "<message>"
+gncgit checkout <branch>
 ```
 
 ## Internal structure
@@ -35,12 +37,12 @@ gncgit commit -m "<message>"
 
 ## Project status
 
-This is an early MVP. The current version focuses on the core ideas behind Git: objects, commits, branches, and the index.
+This is an early MVP. The current version focuses on the core ideas behind Git: objects, commits, branches, checkout, and the index.
 
 Planned features:
 
 * log
 * status
-* branch
-* checkout
-* restore files from commits
+* better checkout behavior
+* restore files from specific commits
+* branch listing
